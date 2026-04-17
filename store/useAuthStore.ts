@@ -39,6 +39,15 @@ const mapDatabaseUserToUser = (dbUser: any): User => {
   };
 };
 
+const generateReferralCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
@@ -119,7 +128,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, authError: null });
     
     try {
-      if (!data.email || !data.password || !data.firstName || !data.lastName || !data.phone) {
+      if (!data.email || !data.password || !data.firstName || !data.lastName) {
         set({ 
           isLoading: false, 
           authError: 'Please fill in all required fields.',
@@ -135,6 +144,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return false;
       }
 
+      // Step 1: Create auth user
       const { data: authData, error: signupError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -154,37 +164,87 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return false;
       }
 
-      if (authData.user) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authData.user.id)
-          .single();
-
-        if (userError) {
-          set({ 
-            isLoading: false, 
-            authError: 'Account created but failed to load profile. Please try logging in.',
-          });
-          return false;
-        }
-
-        const user = mapDatabaseUserToUser(userData);
+      if (!authData.user) {
         set({ 
-          user,
-          isAuthenticated: true, 
-          isLoading: false,
-          authError: null,
+          isLoading: false, 
+          authError: 'Failed to create account. Please try again.',
         });
-        return true;
+        return false;
       }
 
+      // Step 2: Create user record in users table with profile data
+      const referralCode = generateReferralCode();
+      const { data: insertedUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: data.email,
+          phone: data.phone || '',
+          firstName: data.firstName,
+          lastName: data.lastName,
+          totalPoints: 100, // Bonus signup points
+          currentTier: 'bronze',
+          avatar: '',
+          referralCode: referralCode,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        // If user record creation fails, try to clean up auth user
+        await supabase.auth.signOut();
+        set({ 
+          isLoading: false, 
+          authError: 'Failed to complete signup. Please try again.',
+        });
+        return false;
+      }
+
+      // Step 3: Create loyalty card for the new user
+      const { error: loyaltyError } = await supabase
+        .from('loyalty_cards')
+        .insert({
+          userId: authData.user.id,
+          cardNumber: `FB${Date.now()}${Math.floor(Math.random() * 1000)}`,
+          balance: 100, // Bonus signup points
+          tier: 'bronze',
+          pointsToNextTier: 400, // 500 points needed for silver - 100 bonus
+          lifetimePoints: 100,
+          memberSince: new Date().toISOString(),
+        });
+
+      if (loyaltyError) {
+        console.error('Failed to create loyalty card:', loyaltyError);
+        // Don't fail signup if loyalty card creation fails
+      }
+
+      // Step 4: Create welcome transaction
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          userId: authData.user.id,
+          type: 'bonus',
+          points: 100,
+          description: 'Welcome bonus - Thank you for joining Forest Brew!',
+        });
+
+      if (transactionError) {
+        console.error('Failed to create welcome transaction:', transactionError);
+        // Don't fail signup if transaction creation fails
+      }
+
+      // Step 5: Map and set user in state
+      const user = mapDatabaseUserToUser(insertedUser);
       set({ 
-        isLoading: false, 
-        authError: 'Failed to create account. Please try again.',
+        user,
+        isAuthenticated: true, 
+        isLoading: false,
+        authError: null,
       });
-      return false;
+      return true;
+
     } catch (error: any) {
+      console.error('Signup error:', error);
       set({ 
         isLoading: false, 
         authError: 'An unexpected error occurred. Please try again.',
