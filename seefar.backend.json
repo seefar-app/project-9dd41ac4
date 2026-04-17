@@ -1,0 +1,472 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-04-17T19:13:21.028Z",
+  "schema": {
+    "sql": "-- Create extensions\nCREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";\n\n-- Create users table\nCREATE TABLE IF NOT EXISTS users (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  email text UNIQUE NOT NULL,\n  phone text,\n  \"firstName\" text,\n  \"lastName\" text,\n  \"totalPoints\" integer DEFAULT 0,\n  \"currentTier\" text,\n  avatar text,\n  \"referralCode\" text UNIQUE,\n  created_at timestamptz DEFAULT now(),\n  updated_at timestamptz DEFAULT now()\n);\n\n-- Create menu_items table\nCREATE TABLE IF NOT EXISTS menu_items (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  name text NOT NULL,\n  description text,\n  price numeric NOT NULL,\n  category text,\n  image text,\n  available boolean DEFAULT true,\n  \"preparationTime\" integer,\n  calories integer,\n  created_at timestamptz DEFAULT now(),\n  updated_at timestamptz DEFAULT now()\n);\n\n-- Create sizes table\nCREATE TABLE IF NOT EXISTS sizes (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  name text NOT NULL,\n  \"priceModifier\" numeric DEFAULT 0,\n  created_at timestamptz DEFAULT now()\n);\n\n-- Create customizations table\nCREATE TABLE IF NOT EXISTS customizations (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  name text NOT NULL,\n  price numeric DEFAULT 0,\n  category text,\n  created_at timestamptz DEFAULT now()\n);\n\n-- Create orders table\nCREATE TABLE IF NOT EXISTS orders (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  \"userId\" uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n  subtotal numeric DEFAULT 0,\n  tax numeric DEFAULT 0,\n  discount numeric DEFAULT 0,\n  total numeric DEFAULT 0,\n  \"pointsEarned\" integer DEFAULT 0,\n  \"pointsRedeemed\" integer DEFAULT 0,\n  \"paymentMethod\" text,\n  status text DEFAULT 'pending',\n  \"estimatedReadyTime\" timestamptz,\n  \"completedAt\" timestamptz,\n  \"qrCode\" text,\n  created_at timestamptz DEFAULT now(),\n  updated_at timestamptz DEFAULT now()\n);\n\n-- Create order_items table\nCREATE TABLE IF NOT EXISTS order_items (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  \"orderId\" uuid NOT NULL REFERENCES orders(id) ON DELETE CASCADE,\n  \"menuItemId\" uuid REFERENCES menu_items(id) ON DELETE SET NULL,\n  name text NOT NULL,\n  quantity integer NOT NULL DEFAULT 1,\n  size text,\n  customizations text[] DEFAULT ARRAY[]::text[],\n  price numeric NOT NULL,\n  image text,\n  created_at timestamptz DEFAULT now()\n);\n\n-- Create rewards table\nCREATE TABLE IF NOT EXISTS rewards (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  name text NOT NULL,\n  description text,\n  \"pointsCost\" integer NOT NULL,\n  category text,\n  image text,\n  available boolean DEFAULT true,\n  \"expiryDays\" integer,\n  created_at timestamptz DEFAULT now()\n);\n\n-- Create transactions table\nCREATE TABLE IF NOT EXISTS transactions (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  \"userId\" uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n  type text NOT NULL,\n  points integer DEFAULT 0,\n  amount numeric DEFAULT 0,\n  description text,\n  \"orderId\" uuid REFERENCES orders(id) ON DELETE SET NULL,\n  created_at timestamptz DEFAULT now()\n);\n\n-- Create loyalty_cards table\nCREATE TABLE IF NOT EXISTS loyalty_cards (\n  \"userId\" uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,\n  \"cardNumber\" text UNIQUE NOT NULL,\n  balance integer DEFAULT 0,\n  tier text,\n  \"pointsToNextTier\" integer DEFAULT 0,\n  \"lifetimePoints\" integer DEFAULT 0,\n  \"memberSince\" timestamptz DEFAULT now(),\n  created_at timestamptz DEFAULT now(),\n  updated_at timestamptz DEFAULT now()\n);\n\n-- Create payment_cards table\nCREATE TABLE IF NOT EXISTS payment_cards (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  last4 text NOT NULL,\n  brand text,\n  \"expiryMonth\" integer,\n  \"expiryYear\" integer,\n  \"isDefault\" boolean DEFAULT false,\n  created_at timestamptz DEFAULT now()\n);\n\n-- Create notifications table\nCREATE TABLE IF NOT EXISTS notifications (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  title text NOT NULL,\n  body text,\n  type text,\n  read boolean DEFAULT false,\n  data jsonb,\n  created_at timestamptz DEFAULT now()\n);\n\n-- Create indexes\nCREATE INDEX IF NOT EXISTS idx_orders_userId ON orders(\"userId\");\nCREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);\nCREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);\nCREATE INDEX IF NOT EXISTS idx_order_items_orderId ON order_items(\"orderId\");\nCREATE INDEX IF NOT EXISTS idx_order_items_menuItemId ON order_items(\"menuItemId\");\nCREATE INDEX IF NOT EXISTS idx_transactions_userId ON transactions(\"userId\");\nCREATE INDEX IF NOT EXISTS idx_transactions_orderId ON transactions(\"orderId\");\nCREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);\nCREATE INDEX IF NOT EXISTS idx_menu_items_category ON menu_items(category);\nCREATE INDEX IF NOT EXISTS idx_menu_items_available ON menu_items(available);\nCREATE INDEX IF NOT EXISTS idx_users_email ON users(email);\nCREATE INDEX IF NOT EXISTS idx_users_referralCode ON users(\"referralCode\");\nCREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);\nCREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);\n\n-- Enable RLS\nALTER TABLE users ENABLE ROW LEVEL SECURITY;\nALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;\nALTER TABLE sizes ENABLE ROW LEVEL SECURITY;\nALTER TABLE customizations ENABLE ROW LEVEL SECURITY;\nALTER TABLE orders ENABLE ROW LEVEL SECURITY;\nALTER TABLE order_items ENABLE ROW LEVEL SECURITY;\nALTER TABLE rewards ENABLE ROW LEVEL SECURITY;\nALTER TABLE transactions ENABLE ROW LEVEL SECURITY;\nALTER TABLE loyalty_cards ENABLE ROW LEVEL SECURITY;\nALTER TABLE payment_cards ENABLE ROW LEVEL SECURITY;\nALTER TABLE notifications ENABLE ROW LEVEL SECURITY;\n\n-- RLS Policies for users\nCREATE POLICY \"Users can view own profile\" ON users\n  FOR SELECT USING (auth.uid() = id);\nCREATE POLICY \"Users can update own profile\" ON users\n  FOR UPDATE USING (auth.uid() = id);\n\n-- RLS Policies for menu_items (public read)\nCREATE POLICY \"Menu items are publicly readable\" ON menu_items\n  FOR SELECT USING (true);\n\n-- RLS Policies for sizes (public read)\nCREATE POLICY \"Sizes are publicly readable\" ON sizes\n  FOR SELECT USING (true);\n\n-- RLS Policies for customizations (public read)\nCREATE POLICY \"Customizations are publicly readable\" ON customizations\n  FOR SELECT USING (true);\n\n-- RLS Policies for orders\nCREATE POLICY \"Users can view own orders\" ON orders\n  FOR SELECT USING (auth.uid() = \"userId\");\nCREATE POLICY \"Users can insert own orders\" ON orders\n  FOR INSERT WITH CHECK (auth.uid() = \"userId\");\nCREATE POLICY \"Users can update own orders\" ON orders\n  FOR UPDATE USING (auth.uid() = \"userId\");\n\n-- RLS Policies for order_items\nCREATE POLICY \"Users can view own order items\" ON order_items\n  FOR SELECT USING (EXISTS (\n    SELECT 1 FROM orders WHERE orders.id = order_items.\"orderId\" AND orders.\"userId\" = auth.uid()\n  ));\nCREATE POLICY \"Users can insert own order items\" ON order_items\n  FOR INSERT WITH CHECK (EXISTS (\n    SELECT 1 FROM orders WHERE orders.id = order_items.\"orderId\" AND orders.\"userId\" = auth.uid()\n  ));\n\n-- RLS Policies for rewards (public read)\nCREATE POLICY \"Rewards are publicly readable\" ON rewards\n  FOR SELECT USING (true);\n\n-- RLS Policies for transactions\nCREATE POLICY \"Users can view own transactions\" ON transactions\n  FOR SELECT USING (auth.uid() = \"userId\");\nCREATE POLICY \"Users can insert own transactions\" ON transactions\n  FOR INSERT WITH CHECK (auth.uid() = \"userId\");\n\n-- RLS Policies for loyalty_cards\nCREATE POLICY \"Users can view own loyalty card\" ON loyalty_cards\n  FOR SELECT USING (auth.uid() = \"userId\");\nCREATE POLICY \"Users can update own loyalty card\" ON loyalty_cards\n  FOR UPDATE USING (auth.uid() = \"userId\");\n\n-- RLS Policies for payment_cards\nCREATE POLICY \"Users can view own payment cards\" ON payment_cards\n  FOR SELECT USING (true);\nCREATE POLICY \"Users can insert own payment cards\" ON payment_cards\n  FOR INSERT WITH CHECK (true);\nCREATE POLICY \"Users can update own payment cards\" ON payment_cards\n  FOR UPDATE USING (true);\nCREATE POLICY \"Users can delete own payment cards\" ON payment_cards\n  FOR DELETE USING (true);\n\n-- RLS Policies for notifications\nCREATE POLICY \"Users can view own notifications\" ON notifications\n  FOR SELECT USING (true);\nCREATE POLICY \"Users can update own notifications\" ON notifications\n  FOR UPDATE USING (true);\n\n-- Trigger function to handle new user signup\nCREATE OR REPLACE FUNCTION public.handle_new_user()\nRETURNS TRIGGER\nLANGUAGE plpgsql\nSECURITY DEFINER SET search_path = public\nAS $$\nBEGIN\n  INSERT INTO public.users (id, email, created_at, updated_at)\n  VALUES (new.id, new.email, now(), now())\n  ON CONFLICT (id) DO NOTHING;\n  RETURN new;\nEND;\n$$;\n\n-- Trigger on auth.users\nDROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;\nCREATE TRIGGER on_auth_user_created\n  AFTER INSERT ON auth.users\n  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();",
+    "tables": [
+      {
+        "name": "users",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "email",
+            "type": "text"
+          },
+          {
+            "name": "phone",
+            "type": "text"
+          },
+          {
+            "name": "firstName",
+            "type": "text"
+          },
+          {
+            "name": "lastName",
+            "type": "text"
+          },
+          {
+            "name": "totalPoints",
+            "type": "integer"
+          },
+          {
+            "name": "currentTier",
+            "type": "text"
+          },
+          {
+            "name": "avatar",
+            "type": "text"
+          },
+          {
+            "name": "referralCode",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "menu_items",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "name",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "price",
+            "type": "numeric"
+          },
+          {
+            "name": "category",
+            "type": "text"
+          },
+          {
+            "name": "image",
+            "type": "text"
+          },
+          {
+            "name": "available",
+            "type": "boolean"
+          },
+          {
+            "name": "preparationTime",
+            "type": "integer"
+          },
+          {
+            "name": "calories",
+            "type": "integer"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "sizes",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "name",
+            "type": "text"
+          },
+          {
+            "name": "priceModifier",
+            "type": "numeric"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "customizations",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "name",
+            "type": "text"
+          },
+          {
+            "name": "price",
+            "type": "numeric"
+          },
+          {
+            "name": "category",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "orders",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "userId",
+            "type": "uuid"
+          },
+          {
+            "name": "subtotal",
+            "type": "numeric"
+          },
+          {
+            "name": "tax",
+            "type": "numeric"
+          },
+          {
+            "name": "discount",
+            "type": "numeric"
+          },
+          {
+            "name": "total",
+            "type": "numeric"
+          },
+          {
+            "name": "pointsEarned",
+            "type": "integer"
+          },
+          {
+            "name": "pointsRedeemed",
+            "type": "integer"
+          },
+          {
+            "name": "paymentMethod",
+            "type": "text"
+          },
+          {
+            "name": "status",
+            "type": "text"
+          },
+          {
+            "name": "estimatedReadyTime",
+            "type": "timestamptz"
+          },
+          {
+            "name": "completedAt",
+            "type": "timestamptz"
+          },
+          {
+            "name": "qrCode",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "order_items",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "orderId",
+            "type": "uuid"
+          },
+          {
+            "name": "menuItemId",
+            "type": "uuid"
+          },
+          {
+            "name": "name",
+            "type": "text"
+          },
+          {
+            "name": "quantity",
+            "type": "integer"
+          },
+          {
+            "name": "size",
+            "type": "text"
+          },
+          {
+            "name": "customizations",
+            "type": "text[]"
+          },
+          {
+            "name": "price",
+            "type": "numeric"
+          },
+          {
+            "name": "image",
+            "type": "text"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "rewards",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "name",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "pointsCost",
+            "type": "integer"
+          },
+          {
+            "name": "category",
+            "type": "text"
+          },
+          {
+            "name": "image",
+            "type": "text"
+          },
+          {
+            "name": "available",
+            "type": "boolean"
+          },
+          {
+            "name": "expiryDays",
+            "type": "integer"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "transactions",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "userId",
+            "type": "uuid"
+          },
+          {
+            "name": "type",
+            "type": "text"
+          },
+          {
+            "name": "points",
+            "type": "integer"
+          },
+          {
+            "name": "amount",
+            "type": "numeric"
+          },
+          {
+            "name": "description",
+            "type": "text"
+          },
+          {
+            "name": "orderId",
+            "type": "uuid"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "loyalty_cards",
+        "columns": [
+          {
+            "name": "userId",
+            "type": "uuid"
+          },
+          {
+            "name": "cardNumber",
+            "type": "text"
+          },
+          {
+            "name": "balance",
+            "type": "integer"
+          },
+          {
+            "name": "tier",
+            "type": "text"
+          },
+          {
+            "name": "pointsToNextTier",
+            "type": "integer"
+          },
+          {
+            "name": "lifetimePoints",
+            "type": "integer"
+          },
+          {
+            "name": "memberSince",
+            "type": "timestamptz"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "payment_cards",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "last4",
+            "type": "text"
+          },
+          {
+            "name": "brand",
+            "type": "text"
+          },
+          {
+            "name": "expiryMonth",
+            "type": "integer"
+          },
+          {
+            "name": "expiryYear",
+            "type": "integer"
+          },
+          {
+            "name": "isDefault",
+            "type": "boolean"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      },
+      {
+        "name": "notifications",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid"
+          },
+          {
+            "name": "title",
+            "type": "text"
+          },
+          {
+            "name": "body",
+            "type": "text"
+          },
+          {
+            "name": "type",
+            "type": "text"
+          },
+          {
+            "name": "read",
+            "type": "boolean"
+          },
+          {
+            "name": "data",
+            "type": "jsonb"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz"
+          }
+        ]
+      }
+    ]
+  },
+  "auth": {
+    "EXTERNAL_EMAIL_ENABLED": true,
+    "MAILER_AUTOCONFIRM": true
+  },
+  "storage": {
+    "buckets": [
+      {
+        "name": "menu-items",
+        "public": true,
+        "fileSizeLimit": 5242880
+      },
+      {
+        "name": "avatars",
+        "public": true,
+        "fileSizeLimit": 5242880
+      }
+    ]
+  },
+  "supabase": {
+    "projectRef": "cykqbnklirkqgnxpelor",
+    "projectUrl": "https://cykqbnklirkqgnxpelor.supabase.co",
+    "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5a3FibmtsaXJrcWdueHBlbG9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDMzOTUsImV4cCI6MjA5MjAxOTM5NX0.IZ1hyaqrBN0-aEddWJoWXzWOYcdRw63PPrLsQ8q-aX4",
+    "status": "ready"
+  }
+}

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '@/lib/supabase';
 import {
   MenuItem,
   CartItem,
@@ -67,219 +68,6 @@ interface StoreState {
   markNotificationRead: (notificationId: string) => void;
 }
 
-const mockSizes: Size[] = [
-  { id: 'small', name: 'Small', priceModifier: 0 },
-  { id: 'medium', name: 'Medium', priceModifier: 0.70 },
-  { id: 'large', name: 'Large', priceModifier: 1.40 },
-];
-
-const mockCustomizations: Customization[] = [
-  { id: 'oat-milk', name: 'Oat Milk', price: 0.80, category: 'milk' },
-  { id: 'almond-milk', name: 'Almond Milk', price: 0.80, category: 'milk' },
-  { id: 'coconut-milk', name: 'Coconut Milk', price: 0.80, category: 'milk' },
-  { id: 'vanilla-syrup', name: 'Vanilla Syrup', price: 0.60, category: 'syrup' },
-  { id: 'caramel-syrup', name: 'Caramel Syrup', price: 0.60, category: 'syrup' },
-  { id: 'hazelnut-syrup', name: 'Hazelnut Syrup', price: 0.60, category: 'syrup' },
-  { id: 'whipped-cream', name: 'Whipped Cream', price: 0.50, category: 'topping' },
-  { id: 'extra-shot', name: 'Extra Espresso Shot', price: 0.90, category: 'extra' },
-];
-
-const mockMenuItems: MenuItem[] = [
-  {
-    id: 'menu-001',
-    name: 'Forest Latte',
-    description: 'Our signature espresso with creamy steamed milk, infused with hints of vanilla and forest honey',
-    price: 5.50,
-    category: 'coffee',
-    image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400',
-    available: true,
-    preparationTime: 5,
-    calories: 180,
-    sizes: mockSizes,
-    customizations: mockCustomizations,
-  },
-  {
-    id: 'menu-002',
-    name: 'Emerald Cold Brew',
-    description: 'Smooth, refreshing cold brew steeped for 20 hours with a touch of organic matcha',
-    price: 5.00,
-    category: 'coffee',
-    image: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=400',
-    available: true,
-    preparationTime: 2,
-    calories: 15,
-    sizes: mockSizes,
-    customizations: mockCustomizations,
-  },
-  {
-    id: 'menu-003',
-    name: 'Cappuccino Classico',
-    description: 'Traditional Italian cappuccino with velvety microfoam and a dusting of cocoa',
-    price: 4.75,
-    category: 'coffee',
-    image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400',
-    available: true,
-    preparationTime: 4,
-    calories: 120,
-    sizes: mockSizes,
-    customizations: mockCustomizations,
-  },
-  {
-    id: 'menu-004',
-    name: 'Caramel Macchiato',
-    description: 'Espresso marked with vanilla and topped with buttery caramel drizzle',
-    price: 5.25,
-    category: 'coffee',
-    image: 'https://images.unsplash.com/photo-1485808191679-5f86510681a2?w=400',
-    available: true,
-    preparationTime: 5,
-    calories: 250,
-    sizes: mockSizes,
-    customizations: mockCustomizations,
-  },
-  {
-    id: 'menu-005',
-    name: 'Matcha Green Dream',
-    description: 'Premium ceremonial grade matcha whisked with steamed oat milk',
-    price: 5.75,
-    category: 'tea',
-    image: 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?w=400',
-    available: true,
-    preparationTime: 4,
-    calories: 160,
-    sizes: mockSizes,
-    customizations: mockCustomizations.filter(c => c.category !== 'extra'),
-  },
-  {
-    id: 'menu-006',
-    name: 'Earl Grey Fog',
-    description: 'Earl grey tea with steamed milk and a hint of lavender honey',
-    price: 4.50,
-    category: 'tea',
-    image: 'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=400',
-    available: true,
-    preparationTime: 3,
-    calories: 140,
-    sizes: mockSizes,
-    customizations: mockCustomizations.filter(c => c.category !== 'extra'),
-  },
-  {
-    id: 'menu-007',
-    name: 'Almond Croissant',
-    description: 'Buttery croissant filled with almond cream and topped with sliced almonds',
-    price: 4.25,
-    category: 'pastries',
-    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400',
-    available: true,
-    preparationTime: 0,
-    calories: 420,
-    sizes: [],
-    customizations: [],
-  },
-  {
-    id: 'menu-008',
-    name: 'Avocado Toast',
-    description: 'Smashed avocado on sourdough with cherry tomatoes, microgreens, and everything seasoning',
-    price: 8.50,
-    category: 'sandwiches',
-    image: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=400',
-    available: true,
-    preparationTime: 7,
-    calories: 380,
-    sizes: [],
-    customizations: [],
-  },
-  {
-    id: 'menu-009',
-    name: 'Berry Bliss Smoothie',
-    description: 'Mixed berries, banana, Greek yogurt, and a touch of forest honey',
-    price: 6.50,
-    category: 'smoothies',
-    image: 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?w=400',
-    available: true,
-    preparationTime: 3,
-    calories: 280,
-    sizes: mockSizes,
-    customizations: [],
-  },
-  {
-    id: 'menu-010',
-    name: 'Pumpkin Spice Latte',
-    description: 'Seasonal favorite with real pumpkin, warm spices, and whipped cream',
-    price: 5.95,
-    category: 'seasonal',
-    image: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400',
-    available: true,
-    preparationTime: 5,
-    calories: 380,
-    sizes: mockSizes,
-    customizations: mockCustomizations,
-  },
-];
-
-const mockRewards: Reward[] = [
-  {
-    id: 'reward-001',
-    name: 'Free Forest Latte',
-    description: 'Enjoy our signature drink on us!',
-    pointsCost: 150,
-    category: 'free_drink',
-    image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400',
-    available: true,
-    expiryDays: 30,
-  },
-  {
-    id: 'reward-002',
-    name: 'Free Pastry',
-    description: 'Choose any pastry from our selection',
-    pointsCost: 100,
-    category: 'free_food',
-    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400',
-    available: true,
-    expiryDays: 30,
-  },
-  {
-    id: 'reward-003',
-    name: '20% Off Order',
-    description: 'Get 20% off your entire order',
-    pointsCost: 200,
-    category: 'discount',
-    image: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400',
-    available: true,
-    expiryDays: 14,
-  },
-  {
-    id: 'reward-004',
-    name: 'Free Cold Brew',
-    description: 'Refreshing cold brew on the house',
-    pointsCost: 125,
-    category: 'free_drink',
-    image: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=400',
-    available: true,
-    expiryDays: 30,
-  },
-  {
-    id: 'reward-005',
-    name: 'Forest Brew Tumbler',
-    description: 'Exclusive branded reusable tumbler',
-    pointsCost: 500,
-    category: 'merchandise',
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',
-    available: true,
-    expiryDays: 60,
-  },
-  {
-    id: 'reward-006',
-    name: '$5 Off Order',
-    description: 'Get $5 off orders over $15',
-    pointsCost: 75,
-    category: 'discount',
-    image: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=400',
-    available: true,
-    expiryDays: 14,
-  },
-];
-
 const mockTiers: Tier[] = [
   {
     name: 'bronze',
@@ -319,173 +107,6 @@ const mockTiers: Tier[] = [
   },
 ];
 
-const mockOrders: Order[] = [
-  {
-    id: 'order-001',
-    userId: 'user-001',
-    items: [
-      {
-        id: 'item-001',
-        orderId: 'order-001',
-        menuItemId: 'menu-001',
-        name: 'Forest Latte',
-        quantity: 1,
-        size: 'Large',
-        customizations: ['Oat Milk', 'Extra Espresso Shot'],
-        price: 8.20,
-        image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400',
-      },
-      {
-        id: 'item-002',
-        orderId: 'order-001',
-        menuItemId: 'menu-007',
-        name: 'Almond Croissant',
-        quantity: 1,
-        size: '-',
-        customizations: [],
-        price: 4.25,
-        image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400',
-      },
-    ],
-    subtotal: 12.45,
-    tax: 1.12,
-    discount: 1.25,
-    total: 12.32,
-    pointsEarned: 18,
-    pointsRedeemed: 0,
-    paymentMethod: 'card',
-    status: 'preparing',
-    createdAt: new Date(Date.now() - 1000 * 60 * 5),
-    estimatedReadyTime: new Date(Date.now() + 1000 * 60 * 8),
-    qrCode: 'FRBW-001-2024',
-  },
-  {
-    id: 'order-002',
-    userId: 'user-001',
-    items: [
-      {
-        id: 'item-003',
-        orderId: 'order-002',
-        menuItemId: 'menu-002',
-        name: 'Emerald Cold Brew',
-        quantity: 2,
-        size: 'Medium',
-        customizations: [],
-        price: 11.40,
-        image: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=400',
-      },
-    ],
-    subtotal: 11.40,
-    tax: 1.03,
-    discount: 0,
-    total: 12.43,
-    pointsEarned: 19,
-    pointsRedeemed: 0,
-    paymentMethod: 'apple_pay',
-    status: 'completed',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    estimatedReadyTime: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 5),
-    completedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 10),
-    qrCode: 'FRBW-002-2024',
-  },
-];
-
-const mockTransactions: Transaction[] = [
-  {
-    id: 'trans-001',
-    userId: 'user-001',
-    type: 'earned',
-    points: 18,
-    amount: 12.32,
-    description: 'Order #FRBW-001-2024',
-    createdAt: new Date(Date.now() - 1000 * 60 * 5),
-    orderId: 'order-001',
-  },
-  {
-    id: 'trans-002',
-    userId: 'user-001',
-    type: 'bonus',
-    points: 50,
-    description: 'Double Points Tuesday!',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-  },
-  {
-    id: 'trans-003',
-    userId: 'user-001',
-    type: 'earned',
-    points: 19,
-    amount: 12.43,
-    description: 'Order #FRBW-002-2024',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    orderId: 'order-002',
-  },
-  {
-    id: 'trans-004',
-    userId: 'user-001',
-    type: 'redeemed',
-    points: -150,
-    description: 'Free Forest Latte Reward',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-  },
-];
-
-const mockLoyaltyCard: LoyaltyCard = {
-  userId: 'user-001',
-  cardNumber: '4532 8901 2345 6789',
-  balance: 2450,
-  tier: 'gold',
-  pointsToNextTier: 2550,
-  lifetimePoints: 4250,
-  memberSince: new Date('2023-06-15'),
-};
-
-const mockPaymentCards: PaymentCard[] = [
-  {
-    id: 'card-001',
-    last4: '4242',
-    brand: 'visa',
-    expiryMonth: 12,
-    expiryYear: 2026,
-    isDefault: true,
-  },
-  {
-    id: 'card-002',
-    last4: '8888',
-    brand: 'mastercard',
-    expiryMonth: 8,
-    expiryYear: 2025,
-    isDefault: false,
-  },
-];
-
-const mockNotifications: Notification[] = [
-  {
-    id: 'notif-001',
-    title: 'Your order is ready! 🎉',
-    body: 'Order #FRBW-001-2024 is ready for pickup',
-    type: 'order',
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 2),
-    data: { orderId: 'order-001' },
-  },
-  {
-    id: 'notif-002',
-    title: 'Double Points Tuesday! 🌟',
-    body: 'Earn 2x points on all purchases today',
-    type: 'promo',
-    read: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-  },
-  {
-    id: 'notif-003',
-    title: 'You earned 50 bonus points!',
-    body: 'Thanks for being a loyal customer',
-    type: 'points',
-    read: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-  },
-];
-
 export const useStore = create<StoreState>((set, get) => ({
   menuItems: [],
   menuLoading: false,
@@ -497,17 +118,68 @@ export const useStore = create<StoreState>((set, get) => ({
   ordersLoading: false,
   rewards: [],
   rewardsLoading: false,
-  transactions: mockTransactions,
+  transactions: [],
   loyaltyCard: null,
   tiers: mockTiers,
-  paymentCards: mockPaymentCards,
-  selectedPaymentMethod: 'card-001',
-  notifications: mockNotifications,
+  paymentCards: [],
+  selectedPaymentMethod: null,
+  notifications: [],
 
   fetchMenuItems: async () => {
     set({ menuLoading: true });
-    await new Promise(resolve => setTimeout(resolve, 800));
-    set({ menuItems: mockMenuItems, menuLoading: false });
+    try {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('*')
+        .eq('available', true);
+      
+      if (error) throw error;
+      
+      // Fetch sizes and customizations
+      const { data: sizesData, error: sizesError } = await supabase
+        .from('sizes')
+        .select('*');
+      
+      if (sizesError) throw sizesError;
+      
+      const { data: customizationsData, error: customizationsError } = await supabase
+        .from('customizations')
+        .select('*');
+      
+      if (customizationsError) throw customizationsError;
+      
+      const sizes: Size[] = (sizesData || []).map(s => ({
+        id: s.id,
+        name: s.name,
+        priceModifier: parseFloat(s.priceModifier || 0),
+      }));
+      
+      const customizations: Customization[] = (customizationsData || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        price: parseFloat(c.price || 0),
+        category: c.category,
+      }));
+      
+      const menuItems: MenuItem[] = (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: parseFloat(item.price),
+        category: item.category,
+        image: item.image,
+        available: item.available,
+        preparationTime: item.preparationTime,
+        calories: item.calories,
+        sizes: item.category === 'pastries' || item.category === 'sandwiches' ? [] : sizes,
+        customizations: item.category === 'pastries' || item.category === 'sandwiches' ? [] : customizations,
+      }));
+      
+      set({ menuItems, menuLoading: false });
+    } catch (error) {
+      console.error('Error fetching menu items:', error);
+      set({ menuLoading: false });
+    }
   },
 
   setSelectedCategory: (category) => {
@@ -563,20 +235,43 @@ export const useStore = create<StoreState>((set, get) => ({
   createOrder: async (paymentMethod, pointsToRedeem = 0) => {
     const { cart, cartTotal, orders, loyaltyCard } = get();
     
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const tax = cartTotal * 0.09;
-    const discount = loyaltyCard ? (cartTotal * (mockTiers.find(t => t.name === loyaltyCard.tier)?.discountPercentage || 0) / 100) : 0;
-    const pointsDiscount = pointsToRedeem > 0 ? pointsToRedeem / 100 : 0;
-    const total = cartTotal + tax - discount - pointsDiscount;
-    const pointsEarned = Math.floor(total * (mockTiers.find(t => t.name === loyaltyCard?.tier)?.pointsMultiplier || 1));
-    
-    const newOrder: Order = {
-      id: `order-${Date.now()}`,
-      userId: 'user-001',
-      items: cart.map((item, idx) => ({
-        id: `item-${Date.now()}-${idx}`,
-        orderId: '',
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error('User not authenticated');
+      
+      const tax = cartTotal * 0.09;
+      const discount = loyaltyCard ? (cartTotal * (mockTiers.find(t => t.name === loyaltyCard.tier)?.discountPercentage || 0) / 100) : 0;
+      const pointsDiscount = pointsToRedeem > 0 ? pointsToRedeem / 100 : 0;
+      const total = cartTotal + tax - discount - pointsDiscount;
+      const pointsEarned = Math.floor(total * (mockTiers.find(t => t.name === loyaltyCard?.tier)?.pointsMultiplier || 1));
+      
+      const estimatedReadyTime = new Date(Date.now() + 1000 * 60 * 10);
+      const qrCode = `FRBW-${Date.now().toString().slice(-3)}-2024`;
+      
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          userId: user.id,
+          subtotal: cartTotal,
+          tax,
+          discount: discount + pointsDiscount,
+          total,
+          pointsEarned,
+          pointsRedeemed: pointsToRedeem,
+          paymentMethod,
+          status: 'confirmed',
+          estimatedReadyTime,
+          qrCode,
+        })
+        .select()
+        .single();
+      
+      if (orderError) throw orderError;
+      
+      // Insert order items
+      const orderItems = cart.map((item, idx) => ({
+        orderId: orderData.id,
         menuItemId: item.menuItem.id,
         name: item.menuItem.name,
         quantity: item.quantity,
@@ -584,51 +279,176 @@ export const useStore = create<StoreState>((set, get) => ({
         customizations: item.selectedCustomizations.map(c => c.name),
         price: item.totalPrice,
         image: item.menuItem.image,
-      })),
-      subtotal: cartTotal,
-      tax,
-      discount: discount + pointsDiscount,
-      total,
-      pointsEarned,
-      pointsRedeemed: pointsToRedeem,
-      paymentMethod: paymentMethod as any,
-      status: 'confirmed',
-      createdAt: new Date(),
-      estimatedReadyTime: new Date(Date.now() + 1000 * 60 * 10),
-      qrCode: `FRBW-${Date.now().toString().slice(-3)}-2024`,
-    };
-    
-    newOrder.items.forEach(item => { item.orderId = newOrder.id; });
-    
-    set({ 
-      orders: [newOrder, ...orders],
-      activeOrder: newOrder,
-      cart: [],
-      cartTotal: 0,
-    });
-    
-    // Simulate status updates
-    setTimeout(() => {
-      set(state => ({
-        orders: state.orders.map(o => o.id === newOrder.id ? { ...o, status: 'preparing' } : o),
-        activeOrder: state.activeOrder?.id === newOrder.id ? { ...state.activeOrder, status: 'preparing' } : state.activeOrder,
       }));
-    }, 3000);
-    
-    setTimeout(() => {
-      set(state => ({
-        orders: state.orders.map(o => o.id === newOrder.id ? { ...o, status: 'ready' } : o),
-        activeOrder: state.activeOrder?.id === newOrder.id ? { ...state.activeOrder, status: 'ready' } : state.activeOrder,
-      }));
-    }, 8000);
-    
-    return newOrder;
+      
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+      
+      if (itemsError) throw itemsError;
+      
+      // Create transaction record
+      const { error: transError } = await supabase
+        .from('transactions')
+        .insert({
+          userId: user.id,
+          type: 'earned',
+          points: pointsEarned,
+          amount: total,
+          description: `Order #${qrCode}`,
+          orderId: orderData.id,
+        });
+      
+      if (transError) throw transError;
+      
+      // Update loyalty card if points redeemed
+      if (pointsToRedeem > 0 && loyaltyCard) {
+        const { error: loyaltyError } = await supabase
+          .from('loyalty_cards')
+          .update({
+            balance: loyaltyCard.balance - pointsToRedeem,
+          })
+          .eq('userId', user.id);
+        
+        if (loyaltyError) throw loyaltyError;
+      }
+      
+      const newOrder: Order = {
+        id: orderData.id,
+        userId: user.id,
+        items: orderItems.map((item, idx) => ({
+          id: `item-${orderData.id}-${idx}`,
+          orderId: orderData.id,
+          menuItemId: item.menuItemId,
+          name: item.name,
+          quantity: item.quantity,
+          size: item.size,
+          customizations: item.customizations,
+          price: item.price,
+          image: item.image,
+        })),
+        subtotal: cartTotal,
+        tax,
+        discount: discount + pointsDiscount,
+        total,
+        pointsEarned,
+        pointsRedeemed: pointsToRedeem,
+        paymentMethod: paymentMethod as any,
+        status: 'confirmed',
+        createdAt: new Date(orderData.created_at),
+        estimatedReadyTime,
+        qrCode,
+      };
+      
+      set({ 
+        orders: [newOrder, ...orders],
+        activeOrder: newOrder,
+        cart: [],
+        cartTotal: 0,
+      });
+      
+      // Simulate status updates
+      setTimeout(async () => {
+        try {
+          await supabase
+            .from('orders')
+            .update({ status: 'preparing' })
+            .eq('id', orderData.id);
+          
+          set(state => ({
+            orders: state.orders.map(o => o.id === orderData.id ? { ...o, status: 'preparing' } : o),
+            activeOrder: state.activeOrder?.id === orderData.id ? { ...state.activeOrder, status: 'preparing' } : state.activeOrder,
+          }));
+        } catch (error) {
+          console.error('Error updating order status:', error);
+        }
+      }, 3000);
+      
+      setTimeout(async () => {
+        try {
+          await supabase
+            .from('orders')
+            .update({ status: 'ready' })
+            .eq('id', orderData.id);
+          
+          set(state => ({
+            orders: state.orders.map(o => o.id === orderData.id ? { ...o, status: 'ready' } : o),
+            activeOrder: state.activeOrder?.id === orderData.id ? { ...state.activeOrder, status: 'ready' } : state.activeOrder,
+          }));
+        } catch (error) {
+          console.error('Error updating order status:', error);
+        }
+      }, 8000);
+      
+      return newOrder;
+    } catch (error) {
+      console.error('Error creating order:', error);
+      throw error;
+    }
   },
 
   fetchOrders: async () => {
     set({ ordersLoading: true });
-    await new Promise(resolve => setTimeout(resolve, 600));
-    set({ orders: mockOrders, ordersLoading: false });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error('User not authenticated');
+      
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('userId', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (ordersError) throw ordersError;
+      
+      // Fetch order items for each order
+      const orders: Order[] = [];
+      
+      for (const orderData of ordersData || []) {
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('orderId', orderData.id);
+        
+        if (itemsError) throw itemsError;
+        
+        const order: Order = {
+          id: orderData.id,
+          userId: orderData.userId,
+          items: (itemsData || []).map(item => ({
+            id: item.id,
+            orderId: item.orderId,
+            menuItemId: item.menuItemId,
+            name: item.name,
+            quantity: item.quantity,
+            size: item.size,
+            customizations: item.customizations || [],
+            price: parseFloat(item.price),
+            image: item.image,
+          })),
+          subtotal: parseFloat(orderData.subtotal),
+          tax: parseFloat(orderData.tax),
+          discount: parseFloat(orderData.discount),
+          total: parseFloat(orderData.total),
+          pointsEarned: orderData.pointsEarned,
+          pointsRedeemed: orderData.pointsRedeemed,
+          paymentMethod: orderData.paymentMethod,
+          status: orderData.status,
+          createdAt: new Date(orderData.created_at),
+          estimatedReadyTime: orderData.estimatedReadyTime ? new Date(orderData.estimatedReadyTime) : undefined,
+          completedAt: orderData.completedAt ? new Date(orderData.completedAt) : undefined,
+          qrCode: orderData.qrCode,
+        };
+        
+        orders.push(order);
+      }
+      
+      set({ orders, ordersLoading: false });
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      set({ ordersLoading: false });
+    }
   },
 
   updateOrderStatus: (orderId, status) => {
@@ -640,8 +460,30 @@ export const useStore = create<StoreState>((set, get) => ({
 
   fetchRewards: async () => {
     set({ rewardsLoading: true });
-    await new Promise(resolve => setTimeout(resolve, 500));
-    set({ rewards: mockRewards, rewardsLoading: false });
+    try {
+      const { data, error } = await supabase
+        .from('rewards')
+        .select('*')
+        .eq('available', true);
+      
+      if (error) throw error;
+      
+      const rewards: Reward[] = (data || []).map(reward => ({
+        id: reward.id,
+        name: reward.name,
+        description: reward.description,
+        pointsCost: reward.pointsCost,
+        category: reward.category,
+        image: reward.image,
+        available: reward.available,
+        expiryDays: reward.expiryDays,
+      }));
+      
+      set({ rewards, rewardsLoading: false });
+    } catch (error) {
+      console.error('Error fetching rewards:', error);
+      set({ rewardsLoading: false });
+    }
   },
 
   redeemReward: async (rewardId) => {
@@ -652,31 +494,107 @@ export const useStore = create<StoreState>((set, get) => ({
       return false;
     }
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newTransaction: Transaction = {
-      id: `trans-${Date.now()}`,
-      userId: 'user-001',
-      type: 'redeemed',
-      points: -reward.pointsCost,
-      description: `${reward.name} Reward`,
-      createdAt: new Date(),
-    };
-    
-    set({
-      loyaltyCard: {
-        ...loyaltyCard,
-        balance: loyaltyCard.balance - reward.pointsCost,
-      },
-      transactions: [newTransaction, ...transactions],
-    });
-    
-    return true;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error('User not authenticated');
+      
+      // Create transaction record
+      const { data: transactionData, error: transError } = await supabase
+        .from('transactions')
+        .insert({
+          userId: user.id,
+          type: 'redeemed',
+          points: -reward.pointsCost,
+          description: `${reward.name} Reward`,
+        })
+        .select()
+        .single();
+      
+      if (transError) throw transError;
+      
+      // Update loyalty card balance
+      const { error: loyaltyError } = await supabase
+        .from('loyalty_cards')
+        .update({
+          balance: loyaltyCard.balance - reward.pointsCost,
+        })
+        .eq('userId', user.id);
+      
+      if (loyaltyError) throw loyaltyError;
+      
+      const newTransaction: Transaction = {
+        id: transactionData.id,
+        userId: user.id,
+        type: 'redeemed',
+        points: -reward.pointsCost,
+        description: `${reward.name} Reward`,
+        createdAt: new Date(transactionData.created_at),
+      };
+      
+      set({
+        loyaltyCard: {
+          ...loyaltyCard,
+          balance: loyaltyCard.balance - reward.pointsCost,
+        },
+        transactions: [newTransaction, ...transactions],
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error redeeming reward:', error);
+      return false;
+    }
   },
 
   fetchLoyaltyCard: async (userId) => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    set({ loyaltyCard: mockLoyaltyCard });
+    try {
+      const { data, error } = await supabase
+        .from('loyalty_cards')
+        .select('*')
+        .eq('userId', userId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (data) {
+        const loyaltyCard: LoyaltyCard = {
+          userId: data.userId,
+          cardNumber: data.cardNumber,
+          balance: data.balance,
+          tier: data.tier,
+          pointsToNextTier: data.pointsToNextTier,
+          lifetimePoints: data.lifetimePoints,
+          memberSince: new Date(data.memberSince),
+        };
+        
+        set({ loyaltyCard });
+      }
+      
+      // Fetch transactions
+      const { data: transactionsData, error: transError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('userId', userId)
+        .order('created_at', { ascending: false });
+      
+      if (transError) throw transError;
+      
+      const transactions: Transaction[] = (transactionsData || []).map(t => ({
+        id: t.id,
+        userId: t.userId,
+        type: t.type,
+        points: t.points,
+        amount: t.amount ? parseFloat(t.amount) : undefined,
+        description: t.description,
+        createdAt: new Date(t.created_at),
+        orderId: t.orderId,
+      }));
+      
+      set({ transactions });
+    } catch (error) {
+      console.error('Error fetching loyalty card:', error);
+    }
   },
 
   addPaymentCard: (card) => {
@@ -704,12 +622,23 @@ export const useStore = create<StoreState>((set, get) => ({
     });
   },
 
-  markNotificationRead: (notificationId) => {
+  markNotificationRead: async (notificationId) => {
     const { notifications } = get();
-    set({
-      notifications: notifications.map(n =>
-        n.id === notificationId ? { ...n, read: true } : n
-      ),
-    });
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notificationId);
+      
+      if (error) throw error;
+      
+      set({
+        notifications: notifications.map(n =>
+          n.id === notificationId ? { ...n, read: true } : n
+        ),
+      });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   },
 }));

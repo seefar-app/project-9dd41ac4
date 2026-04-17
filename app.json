@@ -12,7 +12,9 @@
       "backgroundColor": "#059669",
       "resizeMode": "contain"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.forestbrew.app"
@@ -28,9 +30,17 @@
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-router", "expo-font", "expo-localization"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-localization"
+    ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "https://cykqbnklirkqgnxpelor.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5a3FibmtsaXJrcWdueHBlbG9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDMzOTUsImV4cCI6MjA5MjAxOTM5NX0.IZ1hyaqrBN0-aEddWJoWXzWOYcdRw63PPrLsQ8q-aX4"
     }
   }
 }
