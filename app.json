@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Forest Brew",
+    "slug": "project-9dd41ac4",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "forestbrew",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#059669",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.forestbrew.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#059669"
+      },
+      "package": "com.forestbrew.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-router", "expo-font", "expo-localization"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
